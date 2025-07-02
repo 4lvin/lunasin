@@ -301,10 +301,35 @@ class InvoiceHistoryView extends GetView<InvoiceHistoryController> {
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                        Icon(
-                                          Icons.arrow_forward_ios,
-                                          size: 16,
-                                          color: Colors.white54,
+                                        Row(
+                                          children: [
+                                            // Print button
+                                            InkWell(
+                                              onTap: () async {
+                                                final items = await controller.getInvoiceItems(invoice.id!);
+                                                controller.printInvoice(invoice, items);
+                                              },
+                                              child: Container(
+                                                padding: EdgeInsets.all(8),
+                                                decoration: BoxDecoration(
+                                                  color: Color(0xFF4F46E5).withOpacity(0.1),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Icon(
+                                                  Icons.print_outlined,
+                                                  color: Color(0xFF4F46E5),
+                                                  size: 18,
+                                                ),
+                                              ),
+                                            ),
+                                            SizedBox(width: 8),
+                                            // Detail arrow
+                                            Icon(
+                                              Icons.arrow_forward_ios,
+                                              size: 16,
+                                              color: Colors.white54,
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
