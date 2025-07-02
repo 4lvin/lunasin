@@ -2,7 +2,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:bluetooth_print_plus/bluetooth_print_plus.dart';
-import 'package:flutter/material.dart' hide Alignment;
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../models/invoice_model.dart';
@@ -62,12 +62,14 @@ class PrintService extends GetxService {
       print('Bluetooth state: $state');
       switch (state) {
         case BlueState.blueOn:
-          isConnected.value = true;
+        // Don't automatically set connected, wait for actual device connection
           break;
         case BlueState.blueOff:
           isConnected.value = false;
           connectedDevice.value = null;
           _selectedDevice = null;
+          break;
+        default:
           break;
       }
     });
@@ -116,7 +118,7 @@ class PrintService extends GetxService {
       await BluetoothPrintPlus.connect(device);
 
       // Wait a bit and check connection
-      await Future.delayed(Duration(milliseconds: 500));
+      await Future.delayed(Duration(milliseconds: 1000));
 
       // Update state
       connectedDevice.value = device;
@@ -132,6 +134,8 @@ class PrintService extends GetxService {
       return true;
     } catch (e) {
       print('Connection error: $e');
+      isConnected.value = false;
+      connectedDevice.value = null;
       Get.snackbar(
         'Error',
         'Gagal terhubung ke ${device.name}: $e',
@@ -362,8 +366,8 @@ class PrintService extends GetxService {
     );
   }
 
-  // Helper method to create ESC/POS commands for thermal paper
-  List<int> _buildReceiptData({
+  // Helper method to create ESC/POS commands for thermal printing
+  List<int> _buildReceiptCommands({
     required String storeName,
     required String storeAddress,
     required String receiptType,
@@ -374,19 +378,18 @@ class PrintService extends GetxService {
     List<int> bytes = [];
 
     // Initialize printer
-    bytes.addAll([0x1B, 0x40]); // ESC @
+    bytes.addAll([0x1B, 0x40]); // ESC @ - Initialize printer
 
-    // Set character size and alignment
-    bytes.addAll([0x1B, 0x21, 0x00]); // Normal size
-    bytes.addAll([0x1B, 0x61, 0x01]); // Center align
+    // Set character size and alignment to center
+    bytes.addAll([0x1B, 0x61, 0x01]); // ESC a 1 - Center alignment
 
     // Store name (larger font)
-    bytes.addAll([0x1B, 0x21, 0x30]); // Double height and width
+    bytes.addAll([0x1B, 0x21, 0x30]); // ESC ! 30 - Double height and width
     bytes.addAll(storeName.codeUnits);
-    bytes.addAll([0x0A, 0x0A]); // New lines
+    bytes.addAll([0x0A, 0x0A]); // LF LF - Two line feeds
 
     // Store address (normal font)
-    bytes.addAll([0x1B, 0x21, 0x00]); // Normal size
+    bytes.addAll([0x1B, 0x21, 0x00]); // ESC ! 00 - Normal size
     if (storeAddress.isNotEmpty) {
       bytes.addAll(storeAddress.codeUnits);
       bytes.addAll([0x0A]);
@@ -395,25 +398,25 @@ class PrintService extends GetxService {
     // Separator line
     bytes.addAll([0x0A]);
     String separator = '================================';
-    bytes.addAll(separator.substring(0, 32).codeUnits);
+    bytes.addAll(separator.codeUnits);
     bytes.addAll([0x0A]);
 
-    // Receipt type
-    bytes.addAll([0x1B, 0x21, 0x10]); // Bold
+    // Receipt type (bold)
+    bytes.addAll([0x1B, 0x21, 0x08]); // ESC ! 08 - Bold
     bytes.addAll(receiptType.codeUnits);
     bytes.addAll([0x0A, 0x0A]);
 
-    // Details
+    // Details (left align)
     bytes.addAll([0x1B, 0x21, 0x00]); // Normal size
     bytes.addAll([0x1B, 0x61, 0x00]); // Left align
 
     details.forEach((key, value) {
-      String line = _formatLine(key, value, 32);
+      String line = '$key: $value';
       bytes.addAll(line.codeUnits);
       bytes.addAll([0x0A]);
     });
 
-    bytes.addAll(separator.substring(0, 32).codeUnits);
+    bytes.addAll(separator.codeUnits);
     bytes.addAll([0x0A]);
 
     // Items
@@ -426,34 +429,42 @@ class PrintService extends GetxService {
         // Quantity and price
         String qtyPrice = '${item['qty']}x${item['price']}';
         String total = item['total']!;
-        String line = _formatLine(qtyPrice, total, 32);
+
+        // Calculate spaces needed for alignment
+        int lineWidth = 32;
+        int spacesNeeded = lineWidth - qtyPrice.length - total.length;
+        String spaces = spacesNeeded > 0 ? ' ' * spacesNeeded : ' ';
+
+        String line = qtyPrice + spaces + total;
         bytes.addAll(line.codeUnits);
-        bytes.addAll([0x0A, 0x0A]);
+        bytes.addAll([0x0A]);
       }
 
-      bytes.addAll(separator.substring(0, 32).codeUnits);
+      bytes.addAll(separator.codeUnits);
       bytes.addAll([0x0A]);
     }
 
     // Totals
     totals.forEach((key, value) {
-      String line = _formatLine(key, value, 32);
       if (key.contains('TOTAL')) {
-        bytes.addAll([0x1B, 0x21, 0x10]); // Bold for total
+        bytes.addAll([0x1B, 0x21, 0x08]); // Bold for total
       }
+
+      String line = '$key: $value';
       bytes.addAll(line.codeUnits);
       bytes.addAll([0x0A]);
+
       if (key.contains('TOTAL')) {
         bytes.addAll([0x1B, 0x21, 0x00]); // Back to normal
       }
     });
 
-    bytes.addAll(separator.substring(0, 32).codeUnits);
+    bytes.addAll(separator.codeUnits);
     bytes.addAll([0x0A, 0x0A]);
 
-    // Footer
+    // Footer (center align)
     bytes.addAll([0x1B, 0x61, 0x01]); // Center align
-    bytes.addAll([0x1B, 0x21, 0x10]); // Bold
+    bytes.addAll([0x1B, 0x21, 0x08]); // Bold
     bytes.addAll('TERIMA KASIH'.codeUnits);
     bytes.addAll([0x0A]);
     bytes.addAll([0x1B, 0x21, 0x00]); // Normal
@@ -461,18 +472,9 @@ class PrintService extends GetxService {
     bytes.addAll([0x0A, 0x0A, 0x0A, 0x0A]);
 
     // Cut paper
-    bytes.addAll([0x1D, 0x56, 0x00]);
+    bytes.addAll([0x1D, 0x56, 0x00]); // GS V 0 - Cut paper
 
     return bytes;
-  }
-
-  String _formatLine(String left, String right, int width) {
-    int totalLength = left.length + right.length;
-    if (totalLength >= width) {
-      return '$left $right';
-    }
-    int spaces = width - totalLength;
-    return left + (' ' * spaces) + right;
   }
 
   Future<void> printInvoice(Invoice invoice, List<InvoiceItem> items, {
@@ -492,7 +494,7 @@ class PrintService extends GetxService {
     try {
       isPrinting.value = true;
 
-      final receiptData = _buildReceiptData(
+      final receiptCommands = _buildReceiptCommands(
         storeName: storeName ?? this.storeName.value,
         storeAddress: storeAddress ?? this.storeAddress.value,
         receiptType: 'INVOICE',
@@ -516,7 +518,8 @@ class PrintService extends GetxService {
         },
       );
 
-      await BluetoothPrintPlus.write(receiptData as Uint8List?);
+      // Send raw bytes to printer
+      await BluetoothPrintPlus.write(Uint8List.fromList(receiptCommands));
 
       Get.snackbar(
         'Berhasil',
@@ -571,6 +574,9 @@ class PrintService extends GetxService {
       if (paymentAmount != null) {
         totals['Pembayaran'] = _formatCurrency(paymentAmount);
         totals['Sisa Hutang'] = _formatCurrency(debt.remainingAmount - paymentAmount);
+        if (notes != null && notes.isNotEmpty) {
+          details['Catatan'] = notes;
+        }
       } else {
         totals['Sisa Hutang'] = _formatCurrency(debt.remainingAmount);
       }
@@ -579,7 +585,11 @@ class PrintService extends GetxService {
         details['Jatuh Tempo'] = _formatDate(DateTime.parse(debt.dueDate!));
       }
 
-      final receiptData = _buildReceiptData(
+      if (debt.description != null && debt.description!.isNotEmpty) {
+        details['Keterangan'] = debt.description!;
+      }
+
+      final receiptCommands = _buildReceiptCommands(
         storeName: storeName ?? this.storeName.value,
         storeAddress: storeAddress ?? this.storeAddress.value,
         receiptType: receiptType,
@@ -588,7 +598,8 @@ class PrintService extends GetxService {
         totals: totals,
       );
 
-      await BluetoothPrintPlus.write(receiptData as Uint8List?);
+      // Send raw bytes to printer
+      await BluetoothPrintPlus.write(Uint8List.fromList(receiptCommands));
 
       Get.snackbar(
         'Berhasil',
