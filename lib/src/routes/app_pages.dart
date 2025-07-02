@@ -1,4 +1,6 @@
 import 'package:get/get.dart';
+import 'package:lunasi/src/views/login/login.dart';
+import 'package:lunasi/src/views/splash_screen.dart';
 
 import '../binding/create_invoice_binding.dart';
 import '../binding/customer_binding.dart';
@@ -20,6 +22,14 @@ import 'app_routes.dart';
 
 class AppPages {
   static final routes = [
+    GetPage(
+      name: AppRoutes.SPLASH,
+      page: () => SplashScreen(),
+    ),
+    GetPage(
+      name: AppRoutes.LOGIN,
+      page: () => LoginView(),
+    ),
     GetPage(
       name: AppRoutes.DASHBOARD,
       page: () => DashboardView(),

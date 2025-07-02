@@ -234,9 +234,7 @@ class DebtListView extends GetView<DebtListController> {
                             : null,
                       ),
                       child: InkWell(
-                        onTap: () {
-                          // Navigate to debt detail
-                        },
+                        onTap: () => controller.showDebtDetail(debt),
                         borderRadius: BorderRadius.circular(16),
                         child: Padding(
                           padding: EdgeInsets.all(16),
@@ -247,14 +245,14 @@ class DebtListView extends GetView<DebtListController> {
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: _getStatusColor(debt.status).withOpacity(0.1),
+                                  color: controller.getStatusColor(debt.status).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Icon(
                                   debt.status == 'paid'
                                       ? Icons.check_circle_outline
                                       : Icons.schedule_outlined,
-                                  color: _getStatusColor(debt.status),
+                                  color: controller.getStatusColor(debt.status),
                                   size: 24,
                                 ),
                               ),
@@ -282,13 +280,13 @@ class DebtListView extends GetView<DebtListController> {
                                             vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: _getStatusColor(debt.status).withOpacity(0.1),
+                                            color: controller.getStatusColor(debt.status).withOpacity(0.1),
                                             borderRadius: BorderRadius.circular(8),
                                           ),
                                           child: Text(
-                                            _getStatusText(debt.status),
+                                            controller.getStatusText(debt.status),
                                             style: TextStyle(
-                                              color: _getStatusColor(debt.status),
+                                              color: controller.getStatusColor(debt.status),
                                               fontSize: 10,
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -339,22 +337,42 @@ class DebtListView extends GetView<DebtListController> {
                                             ),
                                           ],
                                         ),
-                                        if (debt.status == 'unpaid')
-                                          InkWell(
-                                            onTap: () => controller.showPaymentDialog(debt),
-                                            child: Container(
-                                              padding: EdgeInsets.all(8),
-                                              decoration: BoxDecoration(
-                                                color: Color(0xFF10B981).withOpacity(0.1),
-                                                borderRadius: BorderRadius.circular(8),
+                                        Row(
+                                          children: [
+                                            if (debt.status == 'unpaid')
+                                              InkWell(
+                                                onTap: () => controller.showPaymentDialog(debt),
+                                                child: Container(
+                                                  padding: EdgeInsets.all(8),
+                                                  decoration: BoxDecoration(
+                                                    color: Color(0xFF10B981).withOpacity(0.1),
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.payment_outlined,
+                                                    color: Color(0xFF10B981),
+                                                    size: 18,
+                                                  ),
+                                                ),
                                               ),
-                                              child: Icon(
-                                                Icons.payment_outlined,
-                                                color: Color(0xFF10B981),
-                                                size: 18,
+                                            SizedBox(width: 8),
+                                            InkWell(
+                                              onTap: () => controller.printDebtReceipt(debt),
+                                              child: Container(
+                                                padding: EdgeInsets.all(8),
+                                                decoration: BoxDecoration(
+                                                  color: Color(0xFF4F46E5).withOpacity(0.1),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Icon(
+                                                  Icons.print_outlined,
+                                                  color: Color(0xFF4F46E5),
+                                                  size: 18,
+                                                ),
                                               ),
                                             ),
-                                          ),
+                                          ],
+                                        ),
                                       ],
                                     ),
 
@@ -489,27 +507,5 @@ class DebtListView extends GetView<DebtListController> {
         ),
       ),
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'paid':
-        return Color(0xFF10B981);
-      case 'unpaid':
-        return Color(0xFFF59E0B);
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'paid':
-        return 'LUNAS';
-      case 'unpaid':
-        return 'BELUM LUNAS';
-      default:
-        return 'UNKNOWN';
-    }
   }
 }

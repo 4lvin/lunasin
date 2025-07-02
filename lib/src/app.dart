@@ -7,7 +7,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'LUNASI',
+      title: 'SADEAN Lite',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         fontFamily: 'Roboto',
@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      initialRoute: AppRoutes.DASHBOARD,
+      initialRoute: AppRoutes.SPLASH,
       getPages: AppPages.routes,
       debugShowCheckedModeBanner: false,
     );

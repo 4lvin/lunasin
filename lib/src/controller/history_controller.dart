@@ -8,6 +8,7 @@ import '../services/db_service.dart';
 class InvoiceHistoryController extends GetxController {
   final DatabaseService _db = Get.find<DatabaseService>();
 
+
   var invoices = <Invoice>[].obs;
   var isLoading = true.obs;
 
