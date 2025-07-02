@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../controller/history_controller.dart';
+import '../../routes/app_routes.dart';
 
 class InvoiceHistoryView extends GetView<InvoiceHistoryController> {
   @override
@@ -332,7 +333,7 @@ class InvoiceHistoryView extends GetView<InvoiceHistoryController> {
         child: FloatingActionButton.extended(
           onPressed: () {
             // Navigate to create invoice
-            Get.toNamed('/invoice-create');
+            Get.toNamed(AppRoutes.INVOICE_CREATE);
           },
           backgroundColor: Colors.transparent,
           elevation: 0,

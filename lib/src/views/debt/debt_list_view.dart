@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lunasi/src/routes/app_routes.dart';
 
 import '../../controller/debt_list_controller.dart';
 
@@ -451,7 +452,7 @@ class DebtListView extends GetView<DebtListController> {
         child: FloatingActionButton.extended(
           onPressed: () {
             // Navigate to create debt
-            Get.toNamed('/debt-create');
+            Get.toNamed(AppRoutes.DEBT_CREATE);
           },
           backgroundColor: Colors.transparent,
           elevation: 0,
