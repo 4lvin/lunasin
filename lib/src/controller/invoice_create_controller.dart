@@ -6,9 +6,11 @@ import '../models/customer_model.dart';
 import '../models/invoice_model.dart';
 import '../models/products_model.dart';
 import '../services/db_service.dart';
+import '../services/print_service.dart';
 
 class InvoiceCreateController extends GetxController {
   final DatabaseService _db = Get.find<DatabaseService>();
+  final PrintService _printService = Get.find<PrintService>();
 
   var customers = <Customer>[].obs;
   var products = <Product>[].obs;
@@ -40,6 +42,7 @@ class InvoiceCreateController extends GetxController {
     taxController.dispose();
     super.onClose();
   }
+
 
   Future<void> loadInitialData() async {
     try {
@@ -146,6 +149,7 @@ class InvoiceCreateController extends GetxController {
       final invoice = Invoice(
         invoiceNumber: invoiceNumber,
         customerId: selectedCustomer.value?.id,
+        customerName: selectedCustomer.value?.name, // Tambah ini
         subtotal: subtotal.value,
         discount: discount.value,
         tax: tax.value,
@@ -170,6 +174,9 @@ class InvoiceCreateController extends GetxController {
 
       Get.snackbar('Sukses', 'Invoice berhasil disimpan');
 
+      // Ask if user wants to print invoice
+      _askPrintInvoice(invoice.copyWith(id: invoiceId), invoiceItems);
+
       // Reset form
       _resetForm();
 
@@ -179,6 +186,224 @@ class InvoiceCreateController extends GetxController {
       isLoading(false);
     }
   }
+
+  void _askPrintInvoice(Invoice invoice, List<InvoiceItem> items) {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Color(0xFF1F2937),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.print, color: Color(0xFF10B981)),
+            SizedBox(width: 8),
+            Text(
+              'Cetak Invoice?',
+              style: TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
+        content: Text(
+          'Invoice berhasil disimpan. Apakah Anda ingin mencetak invoice sekarang?',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'Tidak',
+              style: TextStyle(color: Colors.white54),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF10B981), Color(0xFF059669)],
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Get.back();
+                _printInvoice(invoice, items);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              icon: Icon(Icons.print, color: Colors.white),
+              label: Text(
+                'Cetak',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _printInvoice(Invoice invoice, List<InvoiceItem> items) {
+    if (!_printService.isConnected.value) {
+      _showPrintOptions(invoice, items);
+    } else {
+      _printService.printInvoice(
+        invoice,
+        items,
+        storeName: _printService.storeName.value,
+        storeAddress: _printService.storeAddress.value,
+      );
+    }
+  }
+
+  void _showPrintOptions(Invoice invoice, List<InvoiceItem> items) {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Color(0xFF1F2937),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.print, color: Color(0xFF4F46E5)),
+            SizedBox(width: 8),
+            Text(
+              'Opsi Cetak',
+              style: TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Color(0xFF3B82F6).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.bluetooth, color: Color(0xFF3B82F6)),
+              ),
+              title: Text(
+                'Cetak via Bluetooth',
+                style: TextStyle(color: Colors.white),
+              ),
+              subtitle: Text(
+                'Hubungkan ke printer thermal 58mm',
+                style: TextStyle(color: Colors.white54),
+              ),
+              onTap: () {
+                Get.back();
+                if (_printService.isConnected.value) {
+                  _printService.printInvoice(
+                    invoice,
+                    items,
+                    storeName: _printService.storeName.value,
+                    storeAddress: _printService.storeAddress.value,
+                  );
+                } else {
+                  _printService.showDeviceSelectionDialog();
+                }
+              },
+            ),
+            SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Color(0xFF10B981).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.share, color: Color(0xFF10B981)),
+              ),
+              title: Text(
+                'Bagikan Invoice',
+                style: TextStyle(color: Colors.white),
+              ),
+              subtitle: Text(
+                'Bagikan detail invoice',
+                style: TextStyle(color: Colors.white54),
+              ),
+              onTap: () {
+                Get.back();
+                _shareInvoice(invoice, items);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'Batal',
+              style: TextStyle(color: Colors.white54),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _shareInvoice(Invoice invoice, List<InvoiceItem> items) {
+    String invoiceText = '''
+${_printService.storeName.value}
+${_printService.storeAddress.value.isNotEmpty ? _printService.storeAddress.value + '\n' : ''}
+================================
+
+INVOICE
+No: ${invoice.invoiceNumber}
+Tanggal: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(invoice.createdAt))}
+${invoice.customerName != null ? 'Pelanggan: ${invoice.customerName}\n' : ''}
+--------------------------------
+
+ITEM PEMBELIAN:
+${items.map((item) => '''
+${item.productName}
+${item.quantity}x${formatCurrency(item.price)} = ${formatCurrency(item.total)}
+''').join('')}
+--------------------------------
+Subtotal: ${formatCurrency(invoice.subtotal)}
+${invoice.discount > 0 ? 'Diskon: -${formatCurrency(invoice.discount)}\n' : ''}${invoice.tax > 0 ? 'Pajak: +${formatCurrency(invoice.tax)}\n' : ''}
+TOTAL: ${formatCurrency(invoice.total)}
+
+================================
+Terima kasih atas kunjungan Anda
+''';
+
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Color(0xFF1F2937),
+        title: Text(
+          'Invoice ${invoice.invoiceNumber}',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: SingleChildScrollView(
+          child: Text(
+            invoiceText,
+            style: TextStyle(
+              color: Colors.white70,
+              fontFamily: 'monospace',
+              fontSize: 12,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('Tutup', style: TextStyle(color: Colors.white54)),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   void _resetForm() {
     selectedCustomer.value = null;

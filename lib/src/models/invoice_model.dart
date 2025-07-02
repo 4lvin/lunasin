@@ -23,6 +23,32 @@ class Invoice {
     this.items = const [],
   });
 
+  Invoice copyWith({
+    int? id,
+    String? invoiceNumber,
+    int? customerId,
+    String? customerName,
+    double? subtotal,
+    double? discount,
+    double? tax,
+    double? total,
+    String? createdAt,
+    List<InvoiceItem>? items,
+  }) {
+    return Invoice(
+      id: id ?? this.id,
+      invoiceNumber: invoiceNumber ?? this.invoiceNumber,
+      customerId: customerId ?? this.customerId,
+      customerName: customerName ?? this.customerName,
+      subtotal: subtotal ?? this.subtotal,
+      discount: discount ?? this.discount,
+      tax: tax ?? this.tax,
+      total: total ?? this.total,
+      createdAt: createdAt ?? this.createdAt,
+      items: items ?? this.items,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
